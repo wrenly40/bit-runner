@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bit Runner 3D — Game Off 2026 (theme: SHIFT)</title>
+<style>
+  :root { --ink:#1f2430; --muted:#7d8db0; --line:rgba(0,229,255,.25); }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         background:#050510; color:#e6f4ff; overflow:hidden; }
+  .wrap { width:100%; }
+  #stage { position:relative; width:100%; height:100vh; height:100dvh; background:#050510;
+           overflow:hidden; }
+  #stage canvas { display:block; width:100% !important; height:100% !important; }
+  .chip { position:absolute; top:12px; background:rgba(8,14,32,.78); backdrop-filter:blur(4px);
+          border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:13px; line-height:1.3; color:#c8f6ff; }
+  .chip b { font-size:15px; color:#ffffff; }
+  #hudLeft { left:12px; }
+  #hudRight { right:12px; text-align:right; }
+  #hudValue { left:50%; transform:translateX(-50%); font-family:ui-monospace,Menlo,monospace;
+              font-size:17px; font-weight:700; padding:8px 16px;
+              color:#00f0ff; text-shadow:0 0 10px rgba(0,240,255,.7);
+              animation:chipGlow 3s ease-in-out infinite; }
+  @keyframes chipGlow { 50% { box-shadow:0 0 18px rgba(0,240,255,.45); } }
+  #hudValue.pulse { animation:pulse .25s ease; }
+  @keyframes pulse { 50% { transform:translateX(-50%) scale(1.15); } }
+  .overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:auto; }
+  /* Title screen: no dialog box — the title lives at the top, the start
+     button and control hints at the bottom, and the world shows through. */
+  .title-screen { flex-direction:column; justify-content:space-between; align-items:center;
+                  padding:11vh 16px 28px; }
+  .title-block { text-align:center; }
+  .title-block h2 { margin:0 0 10px; font-size:clamp(40px, 9vw, 64px); letter-spacing:1px; color:#eafcff;
+                    text-shadow:0 0 18px rgba(0,229,255,.85), 0 2px 14px rgba(0,0,0,.85); }
+  .title-block p { margin:0 0 8px; color:#d7f6ff; font-size:17px; line-height:1.5;
+                   text-shadow:0 1px 8px rgba(0,0,0,.9); }
+  .title-block .values-note { color:#9fc4dd; font-size:14px; }
+  .title-block button { margin-top:14px; }
+  .controls-pill { background:rgba(8,14,32,.72); backdrop-filter:blur(4px);
+                   border:1px solid var(--line); border-radius:999px; padding:8px 16px;
+                   font-size:14px; color:#c8f6ff; }
+  .card { background:#0b1120; color:#e6f4ff; border:1px solid var(--line); border-radius:12px; padding:28px 32px;
+          text-align:center; max-width:min(420px, calc(100vw - 32px)); box-shadow:0 8px 30px rgba(0,0,0,.5), 0 0 24px rgba(0,229,255,.12); }
+  .card h2 { margin:0 0 8px; font-size:24px; }
+  .card p { margin:0 0 14px; color:var(--muted); font-size:14px; line-height:1.55; }
+  .card .reason { color:#c2410c; font-weight:700; font-size:17px; }
+  .key { display:inline-block; min-width:22px; text-align:center; padding:2px 7px;
+         border:1px solid #3a4a6b; border-bottom-width:2px; border-radius:6px;
+         background:linear-gradient(#1a2440, #101828); color:#e6f4ff; font-weight:700; }
+  button { border:1px solid var(--line); background:#0d1526; color:#c8f6ff; border-radius:8px;
+           padding:10px 16px; font-size:15px; cursor:pointer; }
+  button:hover { background:#16203a; }
+  button.primary { background:#00e5ff; color:#04121a; border-color:#00e5ff; box-shadow:0 0 14px rgba(0,229,255,.55); }
+  button.big { padding:14px 30px; font-size:18px; }
+  button.shift { font-weight:700; }
+  button.quiet { padding:7px 12px; font-size:13px; background:transparent; color:#7d8db0;
+                 border-color:rgba(125,141,176,.35); box-shadow:none; }
+  button.quiet:hover { background:rgba(22,32,58,.6); color:#c8f6ff; }
+  #flashes { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  #vignette { position:absolute; inset:0; pointer-events:none;
+              background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
+  #scanlines { position:absolute; inset:0; pointer-events:none; opacity:.35;
+               background:repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px); }
+  .flash { position:absolute; transform:translate(-50%,-50%); font-weight:700; font-size:18px;
+           animation:floatUp 1s ease-out forwards; white-space:nowrap; text-shadow:0 0 10px currentColor; }
+  .flash.big { font-size:34px; }
+  @keyframes floatUp { to { transform:translate(-50%,-180%); opacity:0; } }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .meta { font-size:13px; color:var(--muted); margin-top:10px; }
+  #glError { display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+             color:#ff6b81; font-size:14px; text-align:center; z-index:5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div id="stage">
+  <div class="chip" id="hudLeft" style="display:none">Score <b id="hudScore">0</b> · Best <b id="hudBest">0</b></div>
+  <div class="chip" id="hudValue" style="display:none">0111 · 7</div>
+  <div id="flashes"></div>
+  <div id="vignette"></div>
+  <div id="scanlines"></div>
+  <div id="glError">This browser couldn't start WebGL, so the 3D view can't load here.</div>
+  <div class="overlay title-screen" id="startOverlay">
+    <div class="title-block">
+      <h2>Bit Runner</h2>
+      <p>Doors roll down the lane with a number on them. Match it exactly, or crash.</p>
+      <p class="values-note">Values grow without limit, but reaching 0 ends the run.</p>
+      <button class="primary big" id="startBtn">Start running</button>
+    </div>
+    <div class="controls-pill"><span class="key">◀ ⇧</span> ×2 · <span class="key">⇧ ▶</span> ÷2 · <span class="key">X</span> +1 · <span class="key">&lt;</span> −1</div>
+  </div>
+  <div class="overlay" id="overOverlay" style="display:none"><div class="card">
+    <h2>Game over</h2>
+    <p class="reason" id="overReason"></p>
+    <p id="overScore"></p>
+    <button class="primary" id="againBtn">Play again</button>
+  </div></div>
+  <div class="overlay" id="pauseOverlay" style="display:none"><div class="card">
+    <h2>Paused</h2>
+    <p><span class="key">◀ ⇧</span> ×2 · <span class="key">⇧ ▶</span> ÷2 · <span class="key">X</span> +1 · <span class="key">&lt;</span> −1 · <span class="key">esc</span> resumes</p>
+    <div class="controls" style="justify-content:center">
+      <button class="primary" id="resumeBtn">Resume</button>
+      <button id="pauseRestartBtn">Restart</button>
+      <button id="pauseSoundBtn">Sound: on</button>
+    </div>
+  </div></div>
+</div>
+</div>
+<script type="module">
