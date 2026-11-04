@@ -88,7 +88,7 @@
       <p class="values-note">Values grow without limit, but reaching 0 ends the run.</p>
       <button class="primary big" id="startBtn">Start running</button>
     </div>
-    <div class="controls-pill"><span class="key">◀ ⇧</span> ×2 · <span class="key">⇧ ▶</span> ÷2 · <span class="key">X</span> +1 · <span class="key">&lt;</span> −1</div>
+    <div class="controls-pill"><span class="key">◀ ⇧</span> ×2 · <span class="key">⇧ ▶</span> ÷2 · <span class="key plus-key">X</span> +1 · <span class="key minus-key">&lt;</span> −1</div>
   </div>
   <div class="overlay" id="overOverlay" style="display:none"><div class="card">
     <h2>Game over</h2>
@@ -98,7 +98,7 @@
   </div></div>
   <div class="overlay" id="pauseOverlay" style="display:none"><div class="card">
     <h2>Paused</h2>
-    <p><span class="key">◀ ⇧</span> ×2 · <span class="key">⇧ ▶</span> ÷2 · <span class="key">X</span> +1 · <span class="key">&lt;</span> −1 · <span class="key">esc</span> resumes</p>
+    <p><span class="key">◀ ⇧</span> ×2 · <span class="key">⇧ ▶</span> ÷2 · <span class="key plus-key">X</span> +1 · <span class="key minus-key">&lt;</span> −1 · <span class="key">esc</span> resumes</p>
     <div class="controls" style="justify-content:center">
       <button class="primary" id="resumeBtn">Resume</button>
       <button id="pauseRestartBtn">Restart</button>
@@ -54460,6 +54460,24 @@ const stage = document.getElementById("stage");
 const hudScore = document.getElementById("hudScore");
 const hudBest = document.getElementById("hudBest");
 const hudValue = document.getElementById("hudValue");
+
+// ---------- layout-aware key labels ----------
+// The ops bind to physical positions (e.code), so they work on any layout —
+// QWERTY, AZERTY, QWERTZ, Dvorak, … — but the glyph printed on those keys
+// changes with the layout. Show the glyph the player's own keyboard actually
+// produces at those positions (Keyboard Layout API), falling back to the
+// approved X / < labels when the API is unavailable. The binding itself
+// never changes: left hand ×2/+1, right hand ÷2/−1, ring fingers on the
+// nudge keys.
+if (navigator.keyboard && navigator.keyboard.getLayoutMap) {
+  navigator.keyboard.getLayoutMap().then((map) => {
+    const plus = map.get("KeyX"), minus = map.get("Comma");
+    const plusLabel = plus && plus.toLowerCase() !== "x" ? plus.toUpperCase() : "X";
+    const minusLabel = minus && minus !== "," ? minus.toUpperCase() : "<";
+    document.querySelectorAll(".plus-key").forEach((el) => { el.textContent = plusLabel; });
+    document.querySelectorAll(".minus-key").forEach((el) => { el.textContent = minusLabel; });
+  }).catch(() => {});
+}
 
 // ---------- state ----------
 let running = false, over = false, reason = "";

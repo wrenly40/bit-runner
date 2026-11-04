@@ -8,6 +8,24 @@ const hudScore = document.getElementById("hudScore");
 const hudBest = document.getElementById("hudBest");
 const hudValue = document.getElementById("hudValue");
 
+// ---------- layout-aware key labels ----------
+// The ops bind to physical positions (e.code), so they work on any layout —
+// QWERTY, AZERTY, QWERTZ, Dvorak, … — but the glyph printed on those keys
+// changes with the layout. Show the glyph the player's own keyboard actually
+// produces at those positions (Keyboard Layout API), falling back to the
+// approved X / < labels when the API is unavailable. The binding itself
+// never changes: left hand ×2/+1, right hand ÷2/−1, ring fingers on the
+// nudge keys.
+if (navigator.keyboard && navigator.keyboard.getLayoutMap) {
+  navigator.keyboard.getLayoutMap().then((map) => {
+    const plus = map.get("KeyX"), minus = map.get("Comma");
+    const plusLabel = plus && plus.toLowerCase() !== "x" ? plus.toUpperCase() : "X";
+    const minusLabel = minus && minus !== "," ? minus.toUpperCase() : "<";
+    document.querySelectorAll(".plus-key").forEach((el) => { el.textContent = plusLabel; });
+    document.querySelectorAll(".minus-key").forEach((el) => { el.textContent = minusLabel; });
+  }).catch(() => {});
+}
+
 // ---------- state ----------
 let running = false, over = false, reason = "";
 let score = 0, best = 0, value = 7, doorsOpened = 0;
